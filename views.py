@@ -5,15 +5,17 @@ from rest_framework.decorators import api_view
 from to_do_app.models import Tasks,TblAdmin,AdminLoginAnalytics
 from django.utils import timezone
 from rest_framework import status
-from rest_framework_simplejwt.tokens import RefreshToken
+from datetime import datetime
+# from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.hashers import check_password,make_password
 import secrets
+import pytz
 
 def generate_token(token=''):
     token=""
-    token = secrets.token_urlsafe(30)  # Generate a URL-safe token
+    token = secrets.token_urlsafe(30)
     return token
-
+    
 @api_view(["POST"])
 def get_tasks(request):
     try:
@@ -35,10 +37,10 @@ def create_task(request):
 
         if not task_name:
             return JsonResponse({"error": "Task name is required!"}, status=400)
-
+        #only for git checks
         is_completed = request.data.get("is_completed", False)
 
-        created_at = timezone.now()
+        created_at = datetime.now()
 
         task = Tasks.objects.create(
             task_name=task_name, 
@@ -69,7 +71,7 @@ def bulk_create_tasks(request):
         
         tasks = []
         for task in tasks_data:
-            tasks.append(Tasks(task_name=task["task_name"], is_completed=task["is_completed"],created_at=timezone.now()))
+            tasks.append(Tasks(task_name=task["task_name"], is_completed=task["is_completed"],created_at=datetime.now()))
 
         Tasks.objects.bulk_create(tasks)
 
@@ -114,7 +116,7 @@ def update_tasks(request):
             tasks_to_update.append((task_id,is_completed))
 
         for task_id,is_completed in tasks_to_update:
-            Tasks.objects.filter(autoid=task_id).update(is_completed=is_completed,updated_date = timezone.now())
+            Tasks.objects.filter(autoid=task_id).update(is_completed=is_completed,updated_date = datetime.now())
 
         return JsonResponse({
             "status":status.HTTP_200_OK,
@@ -132,7 +134,7 @@ def create_admin(request):
         admin_email = (request.data.get("admin_email")).strip()
         admin_password = (request.data.get("admin_password")).strip()
         admin_role = (request.data.get("admin_role")).strip()
-        created_date = timezone.now()
+        created_date = datetime.now()
 
         if not admin_first_name or not admin_email or not admin_last_name or not admin_password or not admin_role:
             return JsonResponse({"error": "Admin name, email, and password are required!"}, status=status.HTTP_400_BAD_REQUEST)
@@ -154,7 +156,6 @@ def create_admin(request):
 
     except Exception as e:
         return JsonResponse({"status": status.HTTP_500_INTERNAL_SERVER_ERROR,"success":0,"error": str(e)})
-    
 
 @api_view(["Post"])
 def admin_login(request):
@@ -177,13 +178,11 @@ def admin_login(request):
         
         #fetch adminId from 
         adminId = admin.admin_id
-        login_time = timezone.now()
+        login_time = datetime.now()
         ip = get_client_ip(request)
         login_status = 1
-        created_at  = timezone.now()
-
+        created_at  = datetime.now()
         token = generate_token()
-        print(token)
         if AdminLoginAnalytics.objects.filter(login_token = token):
             token = generate_token()
 
@@ -198,7 +197,6 @@ def admin_login(request):
             login_token = token
         ) 
 
-        
         return JsonResponse({ "status":status.HTTP_200_OK, "success":1, "message":"Login Successfull.","data": token })
             
     except Exception as e:
